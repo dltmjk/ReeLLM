@@ -10,15 +10,12 @@ from SimpleTokenizer import SimpleTokenizer
 with open("ReeLRBWittgenstein.txt", "r", encoding="utf-8") as f:
     raw_text = f.read()
 
-
 class GPTDataset(Dataset):
     def __init__(self, txt, tokenizer, max_length, stride):
         self.input_ids = []
         self.target_ids = []
 
         token_ids = tokenizer.encode(txt, allowed_special={"<|endoftext|>"})
-
-        print(len(token_ids))
 
         for i in range(0, len(token_ids) - max_length, stride):
             input_chunk = token_ids[i:i + max_length]
@@ -61,28 +58,19 @@ dataloader = CreateDataloader(
 
 data_iter = iter(dataloader)
 inputs, targets = next(data_iter)
-print("Token IDs:\n", inputs)
-print("\nInputs shape:\\n", inputs.shape)
 
-torch.Size([8, 4, 256])
+vocab_size = 50257
+output_dim = 256
+token_embedding_layer = torch.nn.Embedding(vocab_size, output_dim)
 
+#Create Embeddings
+token_embeddings = token_embedding_layer(inputs)
+print(token_embeddings.shape)
 
+context_length = max_length
+pos_embedding_layer = torch.nn.Embedding(context_length, output_dim)
+pos_embeddings = pos_embedding_layer(torch.arange(context_length))
+print(pos_embeddings.shape)
 
-# # Preprocessing for Tokenization
-# preprocessed = re.split(r'([,.:;?_!"()\'-]|\s)', raw_text)
-# preprocessed = [
-#  item.strip() for item in preprocessed if item.strip()
-#  ]
-# print(preprocessed)
-#
-# # Vocabulary Size
-# all_words = sorted(list(set(preprocessed)))
-# all_words.extend(["<|endoftext|>", "<|unk|>"])
-# vocab_size = len(all_words)
-# print(vocab_size)
-#
-# vocab = {token:integer for integer,token in enumerate(all_words)}
-# for i, item in enumerate(vocab.items()):
-#     print(item)
-#     if i >= 50:
-#         break
+input_embeddings = token_embeddings + pos_embeddings
+print(input_embeddings.shape)
