@@ -5,6 +5,7 @@ import numpy
 import torch
 from torch.utils.data import Dataset, DataLoader
 from SimpleTokenizer import SimpleTokenizer
+import torch.nn as nn
 
 # Extracting Raw Text
 with open("ReeLRBWittgenstein.txt", "r", encoding="utf-8") as f:
@@ -51,6 +52,23 @@ def CreateDataloader(txt, batch_size=4, max_length=256,
 
     return dataloader
 
+class SelfAttention(nn.Module):
+    def __init__(self, input_dim, output_dim, qkv_bias=False):
+        super().__init__()
+        self.W_query = nn.Linear(input_dim, output_dim, bias=qkv_bias)
+        self.W_key = nn.Linear(input_dim, output_dim, bias=qkv_bias)
+        self.W_value = nn.Linear(input_dim, output_dim, bias=qkv_bias)
+    def forward(self, x):
+        keys = x @ self.W.key
+        queries = x @ self.W.query
+        values = x @ self.W.value
+
+        attention_scores = queries @ keys.T
+        attention_weights = torch.softmax (attention_scores / keys.shape[-1] ** 0.5, dim=-1)
+        context_vector = attention_weights @ values
+        return context_vector
+
+
 max_length = 4
 dataloader = CreateDataloader(
     raw_text, batch_size=8, max_length=max_length, stride=max_length, shuffle=False
@@ -73,4 +91,9 @@ pos_embeddings = pos_embedding_layer(torch.arange(context_length))
 print(pos_embeddings.shape)
 
 input_embeddings = token_embeddings + pos_embeddings
-print(input_embeddings.shape)
+
+
+
+
+
+
