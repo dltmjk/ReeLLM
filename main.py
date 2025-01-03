@@ -11,6 +11,7 @@ import torch.nn as nn
 with open("ReeLRBWittgenstein.txt", "r", encoding="utf-8") as f:
     raw_text = f.read()
 
+
 class GPTDataset(Dataset):
     def __init__(self, txt, tokenizer, max_length, stride):
         self.input_ids = []
@@ -32,9 +33,8 @@ class GPTDataset(Dataset):
 
 
 def CreateDataloader(txt, batch_size=4, max_length=256,
-                         stride=128, shuffle=True, drop_last=True,
-                         num_workers=0):
-
+                     stride=128, shuffle=True, drop_last=True,
+                     num_workers=0):
     # Initialize the tokenizer
     tokenizer = tiktoken.get_encoding("gpt2")
 
@@ -52,6 +52,7 @@ def CreateDataloader(txt, batch_size=4, max_length=256,
 
     return dataloader
 
+
 class SelfAttention(nn.Module):
     def __init__(self, input_dim, output_dim, context_length, dropout, qkv_bias=False):
         super().__init__()
@@ -66,15 +67,17 @@ class SelfAttention(nn.Module):
             torch.triu(torch.ones(context_length, context_length),
                        diagonal=1)
         )
+
     def forward(self, x):
         keys = x @ self.W.key
         queries = x @ self.W.query
         values = x @ self.W.value
 
         attention_scores = queries @ keys.T
-        attention_weights = torch.softmax (attention_scores / keys.shape[-1] ** 0.5, dim=-1)
+        attention_weights = torch.softmax(attention_scores / keys.shape[-1] ** 0.5, dim=-1)
         context_vector = attention_weights @ values
         return context_vector
+
 
 class CasualAttention(nn.Module):
     def __init__(self, d_in, d_out, context_length, dropout, qkv_bias=False):
@@ -106,6 +109,20 @@ class CasualAttention(nn.Module):
         context_vec = attn_weights @ values
         return context_vec
 
+
+class MultiHeadAttentionWrapper(nn.Module):
+    def __init__(self, d_in, d_out, context_length, dropout, num_heads, qkv_bias=False):
+        super().__init__()
+        self.heads = nn.ModuleList(
+            [CasualAttention(
+                d_in, d_out, context_length, dropout, qkv_bias
+            ) for _ in range(num_heads)]
+        )
+
+        def forward(self, x):
+            return torch.cat([head(x) for head in self.heads], dim=-1)
+
+
 max_length = 4
 dataloader = CreateDataloader(
     raw_text, batch_size=8, max_length=max_length, stride=max_length, shuffle=False
@@ -118,7 +135,7 @@ vocab_size = 50257
 output_dim = 256
 token_embedding_layer = torch.nn.Embedding(vocab_size, output_dim)
 
-#Create Embeddings
+# Create Embeddings
 token_embeddings = token_embedding_layer(inputs)
 print(token_embeddings.shape)
 
@@ -128,11 +145,3 @@ pos_embeddings = pos_embedding_layer(torch.arange(context_length))
 print(pos_embeddings.shape)
 
 input_embeddings = token_embeddings + pos_embeddings
-
-
-
-
-
-
-
-
